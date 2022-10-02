@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31624.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SPP-Tracer", "SPP-Tracer\SPP-Tracer.csproj", "{FBD41892-D994-4227-BF1D-FBAFF505E82D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FBD41892-D994-4227-BF1D-FBAFF505E82D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FBD41892-D994-4227-BF1D-FBAFF505E82D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FBD41892-D994-4227-BF1D-FBAFF505E82D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FBD41892-D994-4227-BF1D-FBAFF505E82D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1585957C-B8B4-4810-BC5C-0A1D14B19E47}
+	EndGlobalSection
+EndGlobal
