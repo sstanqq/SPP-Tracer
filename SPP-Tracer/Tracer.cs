@@ -1,60 +1,88 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Threading;
+
+using SPP_Tracer.Results;
+using SPP_Tracer.bufResults;
 
 namespace SPP_Tracer
 {
-    public interface ITracer
+    // Реализуем интерфес 
+    public class Tracer
     {
-        // Вызывается в начале замеряемого метода
-        void StartTrace();
+        private traceResult bufResult;
+        private ConcurrentDictionary<int, ConcurrentStack<stackMethodInfo>> _methodOrder;
 
-        // Вызывается в конце замеряемого метода
-        void StopTrace();
+        private object locker = new();
 
-        // получить результаты измерений
-        //TraceResult GetTraceResult();
-    }
-
-    // Реализовываем интерфейс ITrace
-    public class Tracer : ITracer
-    {
-        // Возвращает кол-во тактов на момент вызова
-        public static long GetTimestamp()
+        // Конструктор 
+        public Tracer()
         {
-            return DateTime.UtcNow.Ticks;
+            bufResult = new traceResult();
+            _methodOrder = new ConcurrentDictionary<int, ConcurrentStack<stackMethodInfo>>();
         }
 
-        // Запущен ли таймер
-        private bool isRunning;
-        // Число тактов на момент запуска
-        private long startTimeStamp;
-        // Общее число затраченных тактов
-        private long totalTacts;
+        private threadInfo GetThreadId()
+        {
+            threadInfo currThreadInfo;
+            int currId = Thread.CurrentThread.ManagedThreadId;
+            currThreadInfo = bufResult.Threads.Find(x => (x.Id == currId));
+            if (currThreadInfo == null)
+            {
+                bufResult?.Threads.Add(new threadInfo(currId));
+                currThreadInfo = bufResult?.Threads[bufResult.Threads.Count - 1];
+            }
+            return currThreadInfo;
+        }
 
+        // Начало 
         public void StartTrace()
         {
-            if (!isRunning)
-            {
-                startTimeStamp = GetTimestamp();
-                isRunning = true;
-            }
+            methodInfo currMethodInfo = new methodInfo();
+            StackTrace stackTrace = new StackTrace();
+            currMethodInfo.name = stackTrace.GetFrame(1).GetMethod().Name;
+            currMethodInfo.className = stackTrace.GetFrame(1).GetMethod().DeclaringType.Name;
+            currMethodInfo.leadTime = -1;
+
+            stackMethodInfo stackMethod = new stackMethodInfo(new Stopwatch(), currMethodInfo);
+
+            int threadId = Thread.CurrentThread.ManagedThreadId;
+            _methodOrder.TryAdd(threadId, new ConcurrentStack<stackMethodInfo>());
+            _methodOrder[threadId].Push(stackMethod);
+
+            stackMethod.MethodStopwatch.Start();
         }
 
+        // Конец
         public void StopTrace()
         {
-            if (isRunning)
+            stackMethodInfo parentStackMethodInfo;
+            stackMethodInfo currStackMethodInfo;
+            int threadId = Thread.CurrentThread.ManagedThreadId;
+            _methodOrder[threadId].TryPop(out currStackMethodInfo);
+
+            currStackMethodInfo.MethodStopwatch?.Stop();
+            currStackMethodInfo.Method.leadTime = currStackMethodInfo.MethodStopwatch.Elapsed.TotalMilliseconds;
+
+            if (_methodOrder[threadId].TryPop(out parentStackMethodInfo))
             {
-                long endTimeStamp = GetTimestamp();
-                long tactsThisPeriod = endTimeStamp - startTimeStamp;
-                totalTacts += tactsThisPeriod;
-                isRunning = false;
-
-                if (totalTacts < 0)
+                parentStackMethodInfo.Method.Methods.Add(currStackMethodInfo.Method);
+                _methodOrder[threadId].Push(parentStackMethodInfo);
+            }
+            else
+            {
+                lock (locker)
                 {
-                    // Для измерения небольших периодов времени(тк могут возвращать отрицательные значения)
-
-                    totalTacts = 0;
+                    GetThreadId().Methods.Add(currStackMethodInfo.Method);
                 }
             }
+
+        }
+
+        public TraceResult GetTraceResult()
+        {
+            return new TraceResult(bufResult);
         }
     }
 }
