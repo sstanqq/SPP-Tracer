@@ -1,8 +1,8 @@
 ﻿using System.IO;
 
-namespace SPP_Tracer
+namespace SPP_Tracer.Serialization
 {
-    public class fileWriter
+    public class fileWriter : IWriter
     {
         private string _destination;
         public fileWriter(string destination)
@@ -10,7 +10,7 @@ namespace SPP_Tracer
             _destination = destination;
         }
 
-        void Write(string result)
+        void IWriter.Write(string result)
         {
             using (StreamWriter writer = new StreamWriter(_destination, false))
             {

@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SPP_Tracer
+namespace SPP_Tracer.Serialization
 {
-    public class consoleWriter
+    public class consoleWriter : IWriter
     {
-        public void Write(string value)
+        void IWriter.Write(string value)
         {
             Console.WriteLine(value);
         }
