@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SPP-Tracer", "SPP-Tracer\SPP-Tracer.csproj", "{FBD41892-D994-4227-BF1D-FBAFF505E82D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test", "Test\Test.csproj", "{D2F19FA2-CD4E-4409-BC8B-530223CFF923}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FBD41892-D994-4227-BF1D-FBAFF505E82D} = {FBD41892-D994-4227-BF1D-FBAFF505E82D}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
