@@ -4,13 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SPP_Tracer
+namespace Test
 {
-    class writer
+    class ClassB
     {
-        public void write(string value)
-        {
-            Console.WriteLine(value);
-        }
     }
 }

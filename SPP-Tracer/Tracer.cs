@@ -1,88 +1,68 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
 
-using SPP_Tracer.Results;
-using SPP_Tracer.bufResults;
+using SPP_Tracer.Result;
 
 namespace SPP_Tracer
 {
-    // Реализуем интерфес 
-    public class Tracer
+    public class Tracer : ITracer
     {
-        private traceResult bufResult;
-        private ConcurrentDictionary<int, ConcurrentStack<stackMethodInfo>> _methodOrder;
+        private ConcurrentDictionary<int, bufThreadInfo> _threads;
 
-        private object locker = new();
-
-        // Конструктор 
         public Tracer()
         {
-            bufResult = new traceResult();
-            _methodOrder = new ConcurrentDictionary<int, ConcurrentStack<stackMethodInfo>>();
+            _threads = new ConcurrentDictionary<int, bufThreadInfo>();
         }
 
-        private threadInfo GetThreadId()
+        TraceResult ITracer.GetTraceResult()
         {
-            threadInfo currThreadInfo;
-            int currId = Thread.CurrentThread.ManagedThreadId;
-            currThreadInfo = bufResult.Threads.Find(x => (x.Id == currId));
-            if (currThreadInfo == null)
+            List<ThreadInfo> threads = new List<ThreadInfo>();
+
+            foreach (var threadId in _threads.Keys)
             {
-                bufResult?.Threads.Add(new threadInfo(currId));
-                currThreadInfo = bufResult?.Threads[bufResult.Threads.Count - 1];
+                threads.Add(new ThreadInfo(threadId, _threads[threadId].Methods));
             }
-            return currThreadInfo;
+
+            return new TraceResult(threads);
         }
 
-        // Начало 
-        public void StartTrace()
+        void ITracer.StartTrace()
         {
-            methodInfo currMethodInfo = new methodInfo();
-            StackTrace stackTrace = new StackTrace();
-            currMethodInfo.name = stackTrace.GetFrame(1).GetMethod().Name;
-            currMethodInfo.className = stackTrace.GetFrame(1).GetMethod().DeclaringType.Name;
-            currMethodInfo.leadTime = -1;
+            int threadId = Environment.CurrentManagedThreadId;
+            _threads.GetOrAdd(threadId, new bufThreadInfo());
 
-            stackMethodInfo stackMethod = new stackMethodInfo(new Stopwatch(), currMethodInfo);
+            var stackTrace = new StackTrace();
+            var method = stackTrace.GetFrame(1).GetMethod();
 
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-            _methodOrder.TryAdd(threadId, new ConcurrentStack<stackMethodInfo>());
-            _methodOrder[threadId].Push(stackMethod);
+            bufMethodInfo _methodInfo = new bufMethodInfo();
+            _methodInfo.name = method.Name;
+            _methodInfo.typeName = method.DeclaringType.Name;
+            _methodInfo.clock.Start();
 
-            stackMethod.MethodStopwatch.Start();
+            _threads[threadId].RunningMethods.Push(_methodInfo);
         }
 
-        // Конец
-        public void StopTrace()
+        void ITracer.StopTrace()
         {
-            stackMethodInfo parentStackMethodInfo;
-            stackMethodInfo currStackMethodInfo;
-            int threadId = Thread.CurrentThread.ManagedThreadId;
-            _methodOrder[threadId].TryPop(out currStackMethodInfo);
+            int threadId = Environment.CurrentManagedThreadId;
+            var bufferMethodInfo = _threads[threadId].RunningMethods.Pop();
 
-            currStackMethodInfo.MethodStopwatch?.Stop();
-            currStackMethodInfo.Method.leadTime = currStackMethodInfo.MethodStopwatch.Elapsed.TotalMilliseconds;
+            bufferMethodInfo.clock.Stop();
+            bufferMethodInfo.UpdateMilliseconds();
 
-            if (_methodOrder[threadId].TryPop(out parentStackMethodInfo))
+            var methodInfo = new MethodInfo(bufferMethodInfo.name, bufferMethodInfo.typeName,
+                                            bufferMethodInfo.milliseconds, bufferMethodInfo.Methods);
+
+            if (_threads[threadId].RunningMethods.Count == 0)
             {
-                parentStackMethodInfo.Method.Methods.Add(currStackMethodInfo.Method);
-                _methodOrder[threadId].Push(parentStackMethodInfo);
+                _threads[threadId].Methods.Add(methodInfo);
             }
             else
             {
-                lock (locker)
-                {
-                    GetThreadId().Methods.Add(currStackMethodInfo.Method);
-                }
+                _threads[threadId].RunningMethods.Peek().Methods.Add(methodInfo);
             }
-
-        }
-
-        public TraceResult GetTraceResult()
-        {
-            return new TraceResult(bufResult);
         }
     }
 }

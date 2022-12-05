@@ -1,4 +1,4 @@
-﻿using SPP_Tracer.Results;
+﻿using SPP_Tracer.Result;
 
 namespace SPP_Tracer.Serialization
 {
